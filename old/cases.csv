@@ -1,0 +1,2 @@
+﻿id,name,description,number_of_replies,replies,expected_output
+"1,Kontoeroeffnung_1,""Test ob ein User die Website via SMS erhält wenn er ein Konto eröffnen möchte"",3,Kontoeroeffnung_1.mp3|Kontoeroeffnung_2.mp3|Kontoeroeffnung_3.mp3,""Habe ich Sie richtig verstanden dass Sie gerne ein Konto eröffnen möchten?| Ein Konto können Sie bequem|Haben Sie noch ein weiteres Anliegen?"""
