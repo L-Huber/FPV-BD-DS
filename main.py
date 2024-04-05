@@ -13,10 +13,14 @@ import sounddevice
 import soundfile
 import time
 import assemblyai as aai
+import unittest
+from difflib import SequenceMatcher
+
+
 
 #insert assembly ai key
 aai.settings.api_key = ""
-
+transcripton_list = []
 
 @dataclass
 class test_case:
@@ -47,11 +51,13 @@ def init_test_cases():
         #print(list_of_csv)
         list_of_csv =list_of_csv[0][0].split(',')
         list_of_csv[4] = list_of_csv[4].split('|')
-        list_of_csv[5] = list_of_csv[5].split('|')
+        #list_of_csv[5] = list_of_csv[5].split('|')
+        expected_output = ["Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?","Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?","Haben Sie noch ein weiteres Anliegen?"]
         print(list_of_csv)
-        test_case1 = test_case(list_of_csv[0], list_of_csv[1], list_of_csv[2], list_of_csv[3], list_of_csv[4], list_of_csv[5])
+        test_case1 = test_case(list_of_csv[0], list_of_csv[1], list_of_csv[2], list_of_csv[3], list_of_csv[4], expected_output)
         list_of_test_cases.append(test_case1)
         print(list_of_test_cases[0].id)
+        print("testoutput: "+str(list_of_test_cases[0].expected_output))
 
             #print(rows[0])
             #print(list_to_create_test_case[0])
@@ -82,6 +88,7 @@ def transcribe_audio(fileneame):
     if transcript.status == aai.TranscriptStatus.error:
         print(transcript.error)
     else:
+        transcripton_list.append(transcript.text)
         print(transcript.text)
 
 def test_test_case(test_case_id):
@@ -99,6 +106,31 @@ def test_test_case(test_case_id):
     play_audio("audio_input/"+"Outro.mp3")
     for steps in transcribe_list:
         transcribe_audio(steps)
+    print(transcripton_list)
+    print(list_of_test_cases[test_case_id-1].expected_output)
+    check_transcripton(transcripton_list, list_of_test_cases[test_case_id-1].expected_output)
+def check_transcripton(transcripton_list, expected_output):
+    # scr:https: // stackoverflow.com / questions / 17388213 / find - the - similarity - metric - between - two - strings, https://stackoverflow.com/questions/4481724/convert-a-list-of-characters-into-a-string
+    #check if the transcripton and the output have the same length
+    result_list = []
+    if len(transcripton_list) != len(expected_output):
+        return 0
+    else:
+        pos = 0
+        for transcriptions in transcripton_list:
+            print("Transcription: "+"".join(transcriptions))
+            print("Expected: "+"".join(expected_output[pos]))
+            result_list.append(similar("".join(transcriptions), "".join(expected_output[pos])))
+            pos = pos + 1
+    #percentage_passed = 0
+    print(result_list)
+
+    return (min(result_list))
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+
 def main():
     global list_of_test_cases
     list_of_test_cases = []
@@ -108,14 +140,94 @@ def main():
     #play_audio('output_sounddevice.wav')
     #transcribe_audio('output_sounddevice.wav')
     init_test_cases()
-    test_test_case(1)
+    #test_test_case(1)
 
 
 
+class TestStringMethods(unittest.TestCase):
 
+    def test_upper(self):
+        transcripton_list= [["test","test2","test3"],["test4","test5","test6","test7","test8","test9"],["test10"],["test11"]]
+        expected_output = [["test","test2","test3"],["test4","test5","test6","test7","test8","test9"],["test10"],["test_wrong"]]
+        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.5)
+    def test_upper2(self):
+        transcripton_list= ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migrosbank.ch-konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung der SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Armlegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
+        expected_output = ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
+        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.9692946058091286)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
+    #unittest.main()
+    init_test_cases()
+    test_test_case(1)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+
+
+"""
+old version of check_transcripton
+def check_transcripton(transcripton_list, expected_output):
+
+    number_of_tests = len(transcripton_list)
+    #print("Number of tests: " + str(number_of_tests))
+    passed_tests = 0
+    failed_tests = 0
+    test_getting_checked = 0
+    # check if at least 80% of the transcripton is correct
+    # scr: https://stackoverflow.com/questions/40581010/how-to-calculate-the-similarity-between-two-strings
+    for transcriptons in transcripton_list:
+        correct_words = 0
+        pos = 0
+        for words in transcriptons:
+            print("Words: "+words)
+            print("Expected: "+expected_output[test_getting_checked][pos])
+            if words == expected_output[test_getting_checked][pos]:
+                correct_words += 1
+            pos += 1
+        if correct_words/len(expected_output[test_getting_checked]) >= 0.8:
+            passed_tests += 1
+        else:
+            failed_tests += 1
+        test_getting_checked += 1
+    percentage_passed = passed_tests/number_of_tests
+    print("Passed tests: "+str(percentage_passed))
+    return (percentage_passed)
+
+"""
+
+"""
+number_of_tests = len(transcripton_list)
+    #print("Number of tests: " + str(number_of_tests))
+    passed_tests = 0
+    failed_tests = 0
+    test_getting_checked = 0
+    # check if at least 80% of the transcripton is correct
+    # scr: https://stackoverflow.com/questions/40581010/how-to-calculate-the-similarity-between-two-strings
+    for transcriptons in expected_output:
+        transcriptons = [item.replace("'", "") for item in transcriptons]
+        for items in expected_output:
+            items = [item.replace(" ", ",") for item in items]
+            print("expected output: " + str(items))
+
+    for transcriptons in transcripton_list:
+        transcriptons = [item.replace("'", "") for item in transcriptons]
+        for items in transcripton_list:
+            items = [item.replace(" ", ",") for item in items]
+            print("items: "+str(items))
+        correct_words = set(transcripton_list[test_getting_checked]) & set(expected_output[test_getting_checked])
+        print("Correct words: "+str(correct_words))
+        if len(correct_words)/len(expected_output[test_getting_checked]) >= 0.8:
+            passed_tests += 1
+        test_getting_checked += 1
+    percentage_passed = passed_tests/number_of_tests
+    print("Passed tests: "+str(percentage_passed))
+
+
+
+
+
+
+
+"""
