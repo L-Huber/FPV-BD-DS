@@ -159,7 +159,6 @@ def eval_agent(test_case_str, response_str, cosine_similarity, static_criteria, 
     error_types = []
 
     # create agent with prompt instructions based on GPT
-    from langchain_openai import ChatOpenAI
     #chat = ChatOpenAI(model="gpt-4")
     chat = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
