@@ -15,12 +15,21 @@ import time
 import assemblyai as aai
 import unittest
 from difflib import SequenceMatcher
+import os
+from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
+from dotenv import load_dotenv, find_dotenv
+from sklearn.metrics.pairwise import cosine_similarity
+from langchain_core.messages import HumanMessage, SystemMessage
 
+#fetch env variables
+load_dotenv(find_dotenv())
 
 
 #insert assembly ai key
-aai.settings.api_key = ""
+aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY")
 transcripton_list = []
+
 
 @dataclass
 class test_case:
@@ -127,9 +136,67 @@ def check_transcripton(transcripton_list, expected_output):
 
     return (min(result_list))
 
-def similar(a, b):
-    return SequenceMatcher(None, a, b).ratio()
+def calculate_cosine_similarity(vector1, vector2):
+    return cosine_similarity([vector1], [vector2])[0][0]
 
+def similar(a, b):
+    #old code
+    # return SequenceMatcher(None, a, b).ratio()
+
+    # embed the strings
+    # embedding model for embeddings query
+    embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+    a_embedding = embeddings.embed_query(a)
+    b_embedding = embeddings.embed_query(b)
+    #print(a_embedding, b_embedding)
+
+    # similarity query using cosine similarity
+    return calculate_cosine_similarity(a_embedding, b_embedding)
+
+
+class EvaluationError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+def eval_agent(test_case_str, response_str, cosine_similarity, number_of_criteria=5, expected_similarity=0.9):
+    # create agent with prompt instructions based on GPT
+    from langchain_openai import ChatOpenAI
+    #chat = ChatOpenAI(model="gpt-4")
+    chat = ChatOpenAI(model="gpt-3.5-turbo-0125")
+
+    if cosine_similarity < expected_similarity:
+        raise EvaluationError(f"Response does not meet the expected similarity of {expected_similarity}. The similarity was {cosine_similarity}.")
+
+    messages = [
+    SystemMessage(content="""You're an evaluation agent. You're evaluating the response of a chatbot to a test case.
+                  The test case is as follows: """ + test_case_str + """
+                  First I want you to identify """+ str(number_of_criteria) + """ criteria to judge the response on.
+                  Then I want you to evaluate the response based on the criteria.
+                  If a criteria is not met by the response, you should classify the error based on the criteria."""
+                  ),
+    HumanMessage(content= response_str),
+        ]
+
+    # Invoke the chat model
+    chat.invoke(messages)
+
+    # Initialize variables to store pass/fail status and error type
+    test_status = "Pass"
+    error_type = None
+
+    response = []
+    for chunk in chat.stream(messages):
+        print(chunk.content, end="", flush=True)
+        #save answer to a file
+        response.append(chunk.content)
+    
+    #save answer to a file
+    with open("output.txt", "w") as text_file:
+        for line in response:
+            text_file.write(line)
+
+    #structure return format
+    #return test_status, error_type
 
 def main():
     global list_of_test_cases
@@ -141,6 +208,27 @@ def main():
     #transcribe_audio('output_sounddevice.wav')
     init_test_cases()
     #test_test_case(1)
+
+def test_agent(): 
+    transcripton_list= ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migrosbank.ch-konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung der SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Armlegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
+    expected_output_list = ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
+
+    # list to string to get embeddings
+    transcription = ", ".join(transcripton_list)
+    expected_output = ", ".join(expected_output_list)
+    print(f' TEST CASE: {transcription} \n \n RESPONSE: {expected_output} \n')
+
+
+    # Embed the strings and calculate cosine similarity
+    cosine_sim = similar(transcription, expected_output)
+    print(f'Cosine similarity: {cosine_sim}')
+
+    # Evaluate the agent with the test case, response, and cosine similarity
+    try:
+        eval_agent(expected_output, transcription, cosine_sim)
+        print(f" \n TEST CASE PASSED.")
+    except EvaluationError as e:
+        print(f"Test case failed. Reason: {str(e)}")
 
 
 
@@ -155,12 +243,14 @@ class TestStringMethods(unittest.TestCase):
         expected_output = ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
         self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.9692946058091286)
 
+test_agent()
+
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+    #main()
     #unittest.main()
-    init_test_cases()
-    test_test_case(1)
+    #init_test_cases()
+    #test_test_case(1)
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 

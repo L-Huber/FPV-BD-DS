@@ -1,0 +1,15 @@
+Criteria for evaluation:
+1. Understanding the user's request: Did the chatbot correctly understand that the user wants to open a bank account?
+2. Providing instructions for account opening: Did the chatbot provide clear and specific instructions on how to open an account?
+3. Sending a link via SMS: Did the chatbot mention sending a link with instructions via SMS?
+4. Timing of follow-up question: Did the chatbot inform the user about when they would be asked if the instructions helped?
+5. Offering further assistance: Did the chatbot ask if the user had any additional requests or needs?
+
+Evaluation:
+1. Understanding the user's request: The chatbot correctly understood that the user wants to open a bank account. (Criteria met)
+2. Providing instructions for account opening: The chatbot provided clear and specific instructions on how to open an account, including clicking on a link in an SMS. (Criteria met)
+3. Sending a link via SMS: The chatbot mentioned sending a link with instructions via SMS, but the link provided was incorrect (should be www.migrosbank.ch/konten instead of www.migrosbank.ch-konten). This is a minor error in providing accurate information. (Error - Incorrect link provided)
+4. Timing of follow-up question: The chatbot informed the user about when they would be asked if the instructions helped (in 20 seconds). (Criteria met)
+5. Offering further assistance: The chatbot asked if the user had any additional requests or needs. (Criteria met)
+
+Overall, the chatbot's response is mostly accurate and helpful, but there was a minor error in providing the correct link for account opening.
