@@ -153,50 +153,69 @@ def similar(a, b):
     # similarity query using cosine similarity
     return calculate_cosine_similarity(a_embedding, b_embedding)
 
+def eval_agent(test_case_str, response_str, cosine_similarity, static_criteria, number_of_criteria=5, expected_similarity=0.95):
+    # Initialize variables to store pass/fail status and error type
+    test_outcome = "Pass"
+    error_types = []
 
-class EvaluationError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-def eval_agent(test_case_str, response_str, cosine_similarity, number_of_criteria=5, expected_similarity=0.9):
     # create agent with prompt instructions based on GPT
     from langchain_openai import ChatOpenAI
     #chat = ChatOpenAI(model="gpt-4")
     chat = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
     if cosine_similarity < expected_similarity:
-        raise EvaluationError(f"Response does not meet the expected similarity of {expected_similarity}. The similarity was {cosine_similarity}.")
+        test_outcome = "Fail"
 
     messages = [
     SystemMessage(content="""You're an evaluation agent. You're evaluating the response of a chatbot to a test case.
                   The test case is as follows: """ + test_case_str + """
                   First I want you to identify """+ str(number_of_criteria) + """ criteria to judge the response on.
                   Then I want you to evaluate the response based on the criteria.
+                  The following criteria are mandatory: """ + static_criteria + """. 
                   If a criteria is not met by the response, you should classify the error based on the criteria."""
                   ),
     HumanMessage(content= response_str),
+    SystemMessage(content="If you have identified a failed criteria please provide the error type at the very end of your response! Use this format: //ERROR START// <error type> //ERROR END//. Please avoid any comments or additional information at all cost! Only include a short description of the error type in the start and end flags. USE DIFFERENT FLAGS FOR MULTIPLE ERRORS!"),
         ]
 
     # Invoke the chat model
     chat.invoke(messages)
 
-    # Initialize variables to store pass/fail status and error type
-    test_status = "Pass"
-    error_type = None
-
     response = []
     for chunk in chat.stream(messages):
-        print(chunk.content, end="", flush=True)
+        #print(chunk.content, end="", flush=True)
         #save answer to a file
         response.append(chunk.content)
-    
+
     #save answer to a file
     with open("output.txt", "w") as text_file:
         for line in response:
             text_file.write(line)
 
+    #if test_outcome == "Fail":
+    # Read the content of the file
+    with open("output.txt", "r") as file:
+        content = file.read()
+        # Flags to search for
+        start_flag = "//ERROR START//"
+        end_flag = "//ERROR END//"
+        error_types = []
+        # Loop to extract multiple error types
+        while start_flag in content and end_flag in content:
+            start_index = content.find(start_flag)
+            end_index = content.find(end_flag)
+            if start_index != -1 and end_index != -1:
+                # Extract the error type between the flags
+                error_type = content[start_index + len(start_flag):end_index].strip()
+                error_types.append(error_type)
+                # Remove the extracted error type from the message content
+                content = content[end_index + len(end_flag):].strip()
+
+    if error_types == []:
+        error_types = ["No errors found in the response."]
+
     #structure return format
-    #return test_status, error_type
+    return test_outcome, cosine_similarity, error_types
 
 def main():
     global list_of_test_cases
@@ -213,23 +232,39 @@ def test_agent():
     transcripton_list= ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migrosbank.ch-konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung der SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Armlegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
     expected_output_list = ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
 
+    test_case_str = "Sie können Ihr Konto einfach und schnell auf unserer Webseite eröffnen. Besuchen Sie www.beispielbank.de/konten und folgen Sie den Anweisungen für die Kontoeröffnung. Wir werden Ihnen dann eine E-Mail mit weiteren Details senden. Bitte überprüfen Sie auch Ihren Spam-Ordner, falls Sie die E-Mail nicht in Ihrem Posteingang finden. Haben Sie Fragen oder benötigen Sie weitere Unterstützung?"
+
+    static_criteria = "1. Link sent per SMS, 2.Link contains correct URL = www.migrosbank.ch-konten, 3. Politness, 4. Clear instructions, 5. Follow-up question."
+    expected_similarity = 0.95
+
     # list to string to get embeddings
     transcription = ", ".join(transcripton_list)
     expected_output = ", ".join(expected_output_list)
+
+
+    print("\nEvaluate the agent with the transcription case, response, and cosine similarity\n")
     print(f' TEST CASE: {transcription} \n \n RESPONSE: {expected_output} \n')
-
-
     # Embed the strings and calculate cosine similarity
     cosine_sim = similar(transcription, expected_output)
     print(f'Cosine similarity: {cosine_sim}')
 
-    # Evaluate the agent with the test case, response, and cosine similarity
-    try:
-        eval_agent(expected_output, transcription, cosine_sim)
-        print(f" \n TEST CASE PASSED.")
-    except EvaluationError as e:
-        print(f"Test case failed. Reason: {str(e)}")
+    outcome = eval_agent(expected_output, transcription, cosine_sim, static_criteria, expected_similarity=expected_similarity)
+    print(f" \n TEST CASE PASSED.")
+    print(f"Outcome: {outcome}")
+    print(f"Test case outcome Reason: cosine_sim of case: {cosine_sim} vs. min cosine_sim: {expected_similarity}")
 
+
+    print("\nEvaluate the agent with the test case, response, and cosine similarity\n")
+    print(f' TEST CASE: {test_case_str} \n \n RESPONSE: {expected_output} \n')
+    # Embed the strings and calculate cosine similarity
+    cosine_sim = similar(test_case_str, expected_output)
+    print(f'Cosine similarity: {cosine_sim}')
+
+    outcome = eval_agent(expected_output, test_case_str, cosine_sim, static_criteria, expected_similarity=expected_similarity)
+    print(f" \n TEST CASE COMPLETE.")
+    print(f"Outcome: {outcome}")
+    print(f"Test case outcome Reason: cosine_sim of case: {cosine_sim} vs. min cosine_sim: {expected_similarity}")
+        
 
 
 class TestStringMethods(unittest.TestCase):
