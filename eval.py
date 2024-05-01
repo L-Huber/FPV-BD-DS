@@ -6,6 +6,7 @@ from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv, find_dotenv
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_core.messages import HumanMessage, SystemMessage
+from dotenv import load_dotenv, find_dotenv
 
 #fetch env variables
 load_dotenv(find_dotenv())
