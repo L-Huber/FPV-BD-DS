@@ -165,11 +165,11 @@ class TestStringMethods(unittest.TestCase):
     def test_upper(self):
         transcripton_list= [["test","test2","test3"],["test4","test5","test6","test7","test8","test9"],["test10"],["test11"]]
         expected_output = [["test","test2","test3"],["test4","test5","test6","test7","test8","test9"],["test10"],["test_wrong"]]
-        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.5)
+        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.8470205155983312)
     def test_upper2(self):
         transcripton_list= ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migrosbank.ch-konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung der SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Armlegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
         expected_output = ['Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?', 'Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?', 'Haben Sie noch ein weiteres Anliegen?']
-        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.9692946058091286)  # TODO epxpected value has to be udate to new cosine function value
+        self.assertEqual(check_transcripton(transcripton_list, expected_output), 0.9765484386251064)  
 
 
 # Press the green button in the gutter to run the script.

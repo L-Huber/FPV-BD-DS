@@ -57,6 +57,7 @@ def eval_agent(test_case_str, response_str, cosine_similarity, static_criteria, 
 
     # Flags to search for
     content = "".join(response)
+    eval_message = content.replace("\n", "\\n")  # Replace newlines with "\\n"
     start_flag = "//ERROR START//"
     end_flag = "//ERROR END//"
     error_types = []
@@ -80,9 +81,9 @@ def eval_agent(test_case_str, response_str, cosine_similarity, static_criteria, 
         # Check if the file is empty
         if os.stat('eval_history.csv').st_size == 0:
             # If it is, write the descriptors
-            writer.writerow(['Test Case', 'Response', 'Cosine Similarity', 'Outcome', 'Error Types'])
+            writer.writerow(['Test Case', 'Response', 'Cosine Similarity', 'Outcome', 'Error Types', 'Eval_Message'])
         # Write the data
-        writer.writerow([test_case_str, response_str, cosine_similarity, test_outcome, error_types])
+        writer.writerow([test_case_str, response_str, cosine_similarity, test_outcome, error_types, eval_message])
 
     #structure return format
     return test_outcome, cosine_similarity, error_types
