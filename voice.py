@@ -1,7 +1,7 @@
 # scr: for audio: https://deepgram.com/learn/best-python-audio-manipulation-tools
 #scr: for transcribing: https://www.assemblyai.com/app
 #scr: for csv: https://docs.python.org/3/library/csv.html , https://www.geeksforgeeks.org/read-a-csv-into-list-of-lists-in-python/
-
+#importing the necessary libraries, escpecially the api from assemblyai
 from dataclasses import dataclass
 import csv
 import sounddevice as sd
@@ -25,10 +25,10 @@ load_dotenv(find_dotenv())
 aai.settings.api_key = os.getenv("ASSEMBLYAI_API_KEY")
 transcripton_list = []
 
-
+#defining the test data class
+#data class is a class that is used to store data, similar to a struct in C
 @dataclass
 class test_case:
-    """Class defining the test cases."""
     id: int
     name: str
     description: str
@@ -36,6 +36,9 @@ class test_case:
     replies: list[str]
     expected_output: list[str]
 
+#defining the list of test cases
+#this function initializes the test cases from the csv file
+#it splits them into the different parts and stores them in the list
 def init_test_cases():
     with open('cases.csv', 'r') as read_obj:
         # Return a reader object which will
@@ -45,17 +48,12 @@ def init_test_cases():
         # convert string to list
         list_of_csv = list(csv_reader)
 
-        #print(list_of_csv)
         list_of_csv.pop(0)
         number_of_test_cases = len(list_of_csv)
         print(number_of_test_cases)
-        #for number_of_test_cases in list_of_csv:
-            #list_of_csv[number_of_test_cases-1]=list_of_csv[number_of_test_cases-1].split(',')
-            #list_of_test_cases.append(test_case(rows[0], rows[1], rows[2], rows[3], rows[4].split('|'), rows[5].split('|')))
-        #print(list_of_csv)
+
         list_of_csv =list_of_csv[0][0].split(',')
         list_of_csv[4] = list_of_csv[4].split('|')
-        #list_of_csv[5] = list_of_csv[5].split('|')
         expected_output = ["Habe ich Sie richtig verstanden, dass Sie gerne ein Konto eröffnen möchten?","Ein Konto können Sie bequem über unsere Webseite beantragen. Unter dem Link www.migosbank.ch slash Konten begleiten wir Sie bei der Kontoeröffnung. Ich schicke Ihnen umgehend einen Link mit der Anleitung per SMS, um ein Konto digital zu beantragen. Bitte öffnen Sie die SMS, klicken Sie auf den Link und beantragen Sie die Kontoeröffnung online auf unserer Webseite. Danach warte ich kurz bis sie das SMS gelesen und die Anleitung unter dem angegebenen Link gelesen haben. In 20 Sekunden werde ich sie fragen, ob ihnen die Anleitung weiter geholfen hat. Hilft Ihnen meine Anleitung, Ihr Anliegen zu lösen?","Haben Sie noch ein weiteres Anliegen?"]
         print(list_of_csv)
         test_case1 = test_case(list_of_csv[0], list_of_csv[1], list_of_csv[2], list_of_csv[3], list_of_csv[4], expected_output)
@@ -63,18 +61,16 @@ def init_test_cases():
         print(list_of_test_cases[0].id)
         print("testoutput: "+str(list_of_test_cases[0].expected_output))
 
-            #print(rows[0])
-            #print(list_to_create_test_case[0])
-            #print(len(rows))
-            #rows[0] = test_case(rows[0], rows[1], rows[2], rows[3], rows[4].split('|'), rows[5].split('|'))
-            # rows[1], rows[2], rows[3], rows[4].split('|'), rows[5].split('|')
-            #print(rows[0])
-
+#defining the functions for the audio to play
+#@param filename: file that should be played
 def play_audio(filename):
     data, fs = soundfile.read(filename, dtype='float32')
     sounddevice.play(data, fs)
     status = sounddevice.wait()
 
+#defining the function for recording the audio
+#@param filename: filename of the recorded file
+#@param length: length of the recording in seconds
 def rec_audio(filename, length):
     fs = 44100
     seconds = length
@@ -83,23 +79,30 @@ def rec_audio(filename, length):
     sd.wait()
     write(filename, fs, recording)
 
+#function that transcribes the audio with the assemblyai api
+#@param filename: filename of the audio file to transcribe
 def transcribe_audio(fileneame):
     config = aai.TranscriptionConfig(language_code="de")
     FILE_URL = fileneame
     transcriber = aai.Transcriber(config=config)
     transcript = transcriber.transcribe(FILE_URL)
 
+    #check if an error occured, if then print the error
     if transcript.status == aai.TranscriptStatus.error:
         print(transcript.error)
     else:
         transcripton_list.append(transcript.text)
         print(transcript.text)
 
+#function that tests the test case
+#@param test_case_id: id of the test case that should be tested
 def test_test_case(test_case_id):
+    #sleep to wait until the audio is played
     sleep_list = [10,72,9]
     transcribe_list = []
     time.sleep(23)
-    #print(list_of_test_cases[test_case_id-1].number_of_replies)
+
+    #steps are the different replies that are played and recorded
     for steps in range(0, int(list_of_test_cases[test_case_id-1].number_of_replies)):
         play_audio("audio_input/"+list_of_test_cases[test_case_id-1].replies[steps])
         print("sleep time: "+str(sleep_list[steps]))
@@ -108,11 +111,17 @@ def test_test_case(test_case_id):
         print("Trascribed finished")
     #the last reply is alwways this one
     play_audio("audio_input/"+"Outro.mp3")
+    # the recorded audio gets transcribed
     for steps in transcribe_list:
         transcribe_audio(steps)
     print(transcripton_list)
     print(list_of_test_cases[test_case_id-1].expected_output)
+    #let's check the transcripton
     check_transcripton(transcripton_list, list_of_test_cases[test_case_id-1].expected_output)
+
+#function that checks the transcripton
+#@param transcripton_list: list of the transcriptons
+#@param expected_output: list of the expected output
 def check_transcripton(transcripton_list, expected_output):
     # scr:https: // stackoverflow.com / questions / 17388213 / find - the - similarity - metric - between - two - strings, https://stackoverflow.com/questions/4481724/convert-a-list-of-characters-into-a-string
     #check if the transcripton and the output have the same length
@@ -131,9 +140,15 @@ def check_transcripton(transcripton_list, expected_output):
 
     return (min(result_list))
 
+#function that calculates the cosine similarity
+#@param vector1: first vector
+#@param vector2: second vector
 def calculate_cosine_similarity(vector1, vector2):
     return cosine_similarity([vector1], [vector2])[0][0]
 
+#function that calculates the similarity between two strings
+#@param a: first string
+#@param b: second string
 def similar(a, b):
     #old code
     # return SequenceMatcher(None, a, b).ratio()
@@ -148,18 +163,17 @@ def similar(a, b):
     # similarity query using cosine similarity
     return calculate_cosine_similarity(a_embedding, b_embedding)
 
-
+#main function
 def main():
     global list_of_test_cases
     list_of_test_cases = []
-    # Use a breakpoint in the code line below to debug your script.
-    #rec_audio('output_sounddevice.wav', 3)
-    #time.sleep(2)
-    #play_audio('output_sounddevice.wav')
-    #transcribe_audio('output_sounddevice.wav')
+    #initialize the test cases
     init_test_cases()
+    #to check test case 1: remove the comment
     #test_test_case(1)
 
+
+#testing the functions
 class TestStringMethods(unittest.TestCase):
 
     def test_upper(self):
