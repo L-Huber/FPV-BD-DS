@@ -28,6 +28,7 @@ from dotenv import load_dotenv, find_dotenv
 # fetch env variables
 load_dotenv(find_dotenv())
 
+
 def calculate_cosine_similarity(vector1, vector2):
     """
     Calculate cosine similarity between two vectors.
@@ -37,6 +38,7 @@ def calculate_cosine_similarity(vector1, vector2):
     @return: The cosine similarity between the two vectors.
     """
     return cosine_similarity([vector1], [vector2])[0][0]
+
 
 def similar(a, b):
     """
@@ -50,6 +52,7 @@ def similar(a, b):
     a_embedding = embeddings.embed_query(a)
     b_embedding = embeddings.embed_query(b)
     return calculate_cosine_similarity(a_embedding, b_embedding)
+
 
 def eval_agent(
     test_case_str,
@@ -73,7 +76,7 @@ def eval_agent(
     test_outcome = "Pass"
     error_types = []
 
-    chat = ChatOpenAI(model="gpt-4")
+    chat = ChatOpenAI(model="gpt-4", temperature=0)
 
     if cosine_similarity < expected_similarity:
         test_outcome = "Fail"
@@ -159,6 +162,7 @@ def eval_agent(
 
     # structure return format
     return test_outcome, cosine_similarity, error_types
+
 
 # Function to test the agent
 def test_agent():
