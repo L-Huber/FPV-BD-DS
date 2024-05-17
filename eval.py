@@ -76,7 +76,7 @@ def eval_agent(
     test_outcome = "Pass"
     error_types = []
 
-    chat = ChatOpenAI(model="gpt-4", temperature=0)
+    chat = ChatOpenAI(model="gpt-4o", temperature=0)
 
     if cosine_similarity < expected_similarity:
         test_outcome = "Fail"
